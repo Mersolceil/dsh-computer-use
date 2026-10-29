@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><title>Computer Use V1 练习台</title>
+<style>body{font:18px system-ui;max-width:850px;margin:40px auto;padding:20px;line-height:1.7}label{display:block;margin:12px 0}input,textarea,button{font:inherit;padding:8px}button{margin:5px}#modal{position:fixed;inset:0;background:#0009;display:grid;place-items:center}#modal[hidden]{display:none}.panel{background:white;padding:40px}#bottom{margin-top:900px}output{display:block;background:#eef6ff;padding:12px;white-space:pre-wrap}</style>
+<h1>Computer Use V1 练习台</h1><p>本地数据，刷新页面可重置界面；重启服务清空保存记录。</p>
+<section><h2>搜索</h2><label>关键词 <input id="query"></label><button id="search">搜索资料</button><output id="results">等待搜索</output></section>
+<section><h2>新建任务</h2><form id="task"><label>标题 <input id="title" required></label><label>描述 <textarea id="description"></textarea></label><button>保存任务</button></form><output id="saved">尚未保存</output></section>
+<section><h2>故障与恢复</h2><button id="replace">替换目标按钮</button><button id="target">目标按钮</button><output id="targetResult">尚未点击</output><button id="openModal">打开遮挡弹窗</button><button id="slow">提交一次并等待较慢结果</button><output id="slowResult">尚未提交</output><button id="alertButton">打开原生提示</button><button id="delayed">显示延迟结果</button><output id="delayedResult">尚未开始</output></section>
+<div id="modal" hidden><div class="panel" role="dialog" aria-label="遮挡弹窗"><p>请先关闭此弹窗，再继续操作页面。</p><button id="dismiss">关闭弹窗</button></div></div>
+<section id="bottom"><button id="bottomButton">页面底部按钮</button><output id="bottomResult">尚未点击底部按钮</output></section>
+<script>
+const $=id=>document.getElementById(id);
+$('search').onclick=()=>{$('results').textContent=$('query').value.includes('浏览器')?'浏览器自动化入门：Playwright；Computer Use 操作循环':'没有匹配结果'};
+$('task').onsubmit=async e=>{e.preventDefault();const response=await fetch('/api/submit',{method:'POST',body:JSON.stringify({title:$('title').value,description:$('description').value})});const value=await response.json();$('saved').textContent='保存成功，记录数：'+value.count};
+function bindTarget(){$('target').onclick=()=>{$('targetResult').textContent='已点击目标按钮'}}bindTarget();
+$('replace').onclick=()=>{const old=$('target');old.replaceWith(old.cloneNode(true));bindTarget()};
+$('openModal').onclick=()=>{$('modal').hidden=false};$('dismiss').onclick=()=>{$('modal').hidden=true};
+$('slow').onclick=async()=>{const r=await fetch('/api/submit',{method:'POST',body:JSON.stringify({title:'慢响应提交',description:'仅一次'})});const v=await r.json();$('slowResult').textContent='服务器已接收，记录数：'+v.count;setTimeout(()=>{$('slowResult').textContent+='；界面后续更新完成'},1500)};
+$('alertButton').onclick=()=>alert('这是原生提示；插件默认取消，不自动接受。');
+$('delayed').onclick=()=>setTimeout(()=>{$('delayedResult').textContent='延迟结果已出现'},800);
+$('bottomButton').onclick=()=>{$('bottomResult').textContent='已点击底部按钮'};
+</script></html>

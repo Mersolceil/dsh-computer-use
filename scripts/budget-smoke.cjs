@@ -1,0 +1,25 @@
+// Real DSH host meter and session with synthetic inputs; no model or network.
+const {pathToFileURL}=require('node:url'),{resolve}=require('node:path'),assert=require('node:assert/strict')
+;(async()=>{
+ const root='/Applications/DeepSeek Harness.app/Contents/Resources/app.asar/dsh/node_modules/@deepseek-ai/',load=n=>import(pathToFileURL(root+n+'/lib/index.js').href)
+ const {Context,Service}=await load('cordis'),{SessionStore}=await load('dsh-session'),{SessionProjectionRegistry}=await load('dsh-session-projection'),{TokenMeter}=await load('dsh-token-meter'),{ToolRuntime}=await load('dsh-tools')
+ const plugin=await import(pathToFileURL(resolve('src/plugin.js')).href),ctx=new Context();new SessionStore(ctx);new SessionProjectionRegistry(ctx);new TokenMeter(ctx)
+ class Prompt extends Service{constructor(c){super(c,'systemPrompt')}tools(){return()=>{}}};new Prompt(ctx)
+ class Images extends Service{constructor(c){super(c,'attachments')}async saveImages(){return[]}};new Images(ctx)
+ const tools=new ToolRuntime(ctx,{mode:'native'}),fiber=ctx.plugin(plugin,{budgetStatusEnabled:true});await fiber;await new Promise(r=>setImmediate(r))
+ try{
+  const session=ctx.sessions.create('budget-smoke'),agent={session},call=(args={})=>tools.execute({callId:'budget-query',name:'cu_browser_budget_status',arguments:args,agent,signal:new AbortController().signal})
+  const empty=await call();assert.equal(empty.value.estimated_utilization,null);assert.equal(empty.value.estimate_band,'unknown')
+  session.append('user/message',{id:'budget-user',role:'user',source:{kind:'user'},content:[{type:'text',text:'x'.repeat(4000)}]},{surfaceOp:'append'})
+  session.append('request/header',{header:{config:{provider:'fixture',model:'fixture'}}})
+  session.append('request/context',{provider:'fixture',model:'fixture',contextWindow:10000})
+  const result=await call({reserve_tokens:1000}),host=ctx.tokenMeter.measure(session)
+  assert.equal(result.value.committed_surface_estimate_tokens,host.totalTokens);assert.equal(result.value.last_recorded_context_window,10000);assert.equal(result.value.route_matches_capacity,true);assert.equal(result.value.estimated_utilization,(host.totalTokens+1000)/10000)
+  session.append('request/context',{provider:'fixture',model:'different',contextWindow:20000})
+  const changed=await call({reserve_tokens:1000});assert.equal(changed.value.estimated_utilization,null);assert.equal(changed.value.route_matches_capacity,false)
+  session.append('user/message',{id:'image-user',role:'user',source:{kind:'user'},content:[{type:'image',attachment:{attachmentId:'sha256:fixture',mediaType:'image/png',width:10,height:10,bytes:20}}]},{surfaceOp:'append'})
+  session.append('request/context',{provider:'fixture',model:'fixture',contextWindow:10000})
+  const images=await call({reserve_tokens:1000});assert.equal(images.value.image_pricing,'unknown');assert.equal(images.value.estimated_utilization,null)
+  console.log(JSON.stringify({real_host_meter:true,committed_estimate_matches:true,unknown_reserve_handled:true,stale_route_detected:true,unpriced_image_detected:true,model_calls:0}))
+ }finally{await fiber.dispose()}
+})().catch(e=>{console.error(e.stack);process.exitCode=1})

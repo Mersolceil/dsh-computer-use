@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "浏览器操作",
+    "description": "用无障碍语义树操作独立浏览器，支持截图、多标签页和专用目录文件上传。",
+    "detail": "docs/PLUGIN-GUIDE.zh.md"
+  }
+}

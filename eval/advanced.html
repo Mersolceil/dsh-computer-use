@@ -1,0 +1,43 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>无障碍语义验收台</title>
+<style>body{font:18px system-ui;margin:30px;line-height:1.6}section{padding:15px;border:1px solid #ccd;margin:15px 0}label{display:block}button,input,select{font:inherit;padding:6px}#menu[hidden]{display:none}iframe{width:600px;height:140px}</style>
+<main aria-label="语义验收">
+<h1>订单工作台</h1>
+<form aria-label="收货信息" id="shipping">
+<label>收件人<input id="recipient"></label>
+<label>城市<select id="city"><option value="sh">上海</option><option value="bj">北京</option></select></label>
+<label><input id="agree" type="checkbox">同意条款</label>
+<label><input id="standard" type="radio" name="delivery" checked>普通配送</label>
+<label><input id="express" type="radio" name="delivery">加急配送</label>
+<button id="save" type="button">保存收货信息</button><output id="shippingResult">尚未保存</output>
+</form>
+<section aria-label="名称与身份">
+<span id="first" hidden>真实</span><span id="last">可访问名称</span>
+<button id="labelled" aria-labelledby="first last"><span aria-hidden="true">视觉图标</span></button><output id="labelResult">尚未操作</output>
+<button id="reorder">重排目标</button><button id="rename">修改目标名称</button><button id="stable">稳定目标</button><output id="identityResult">尚未点击</output>
+<button id="duplicateA" aria-label="保存">保存甲</button><button id="duplicateB" aria-label="保存">保存乙</button><output id="duplicateResult">未保存</output>
+<label>机密输入<input id="password" type="password" value="FAKE_PASSWORD_82913"></label>
+<button id="disabled" disabled>不可操作</button><div role="switch" aria-label="消息通知" aria-checked="false" tabindex="0" id="switch">消息通知</div>
+</section>
+<section aria-label="交互组件">
+<div role="tablist" aria-label="订单类别"><button role="tab" aria-selected="true" id="tabA">待处理</button><button role="tab" aria-selected="false" id="tabB">已完成</button></div><div role="tabpanel" id="panel">待处理订单</div>
+<button id="menuTrigger" aria-haspopup="menu">更多操作</button><div role="menu" id="menu" hidden><button role="menuitem" id="archive">归档订单</button></div><output id="menuResult">尚未归档</output>
+<div id="shadowHost"></div>
+<button id="asyncStart">开始异步任务</button><output id="asyncResult">尚未开始</output>
+<button id="hideLater">延迟隐藏提示</button><div role="status" id="temporary">临时提示</div>
+</section>
+<section aria-label="嵌入页面"><iframe title="地址编辑器" src="/frame"></iframe></section>
+</main><script>
+const $=id=>document.getElementById(id);
+$('save').onclick=async()=>{const data={recipient:$('recipient').value,city:$('city').value,agreed:$('agree').checked,delivery:$('express').checked?'express':'standard'};await fetch('/api/submit',{method:'POST',body:JSON.stringify(data)});$('shippingResult').textContent='收货已保存：'+data.recipient+' / '+data.city+' / '+data.agreed+' / '+data.delivery};
+$('labelled').onclick=()=>{$('labelResult').textContent='名称定位正确'};
+$('stable').onclick=()=>{$('identityResult').textContent='稳定目标已点击'};
+$('reorder').onclick=()=>{$('stable').parentElement.append($('stable'))};
+$('rename').onclick=()=>{$('stable').textContent='新语义目标'};
+$('duplicateA').onclick=()=>{$('duplicateResult').textContent='保存了甲'};$('duplicateB').onclick=()=>{$('duplicateResult').textContent='保存了乙'};
+$('switch').onclick=()=>{$('switch').setAttribute('aria-checked',$('switch').getAttribute('aria-checked')==='true'?'false':'true')};
+$('tabB').onclick=()=>{$('tabA').setAttribute('aria-selected','false');$('tabB').setAttribute('aria-selected','true');$('panel').textContent='已完成订单'};
+$('menuTrigger').onmouseenter=()=>{$('menu').hidden=false};$('archive').onclick=()=>{$('menuResult').textContent='订单已归档';$('menu').hidden=true};
+const root=$('shadowHost').attachShadow({mode:'open'});root.innerHTML='<label>影子输入<input></label><button>保存影子内容</button><output>尚未保存影子内容</output>';root.querySelector('button').onclick=()=>root.querySelector('output').textContent='影子内容：'+root.querySelector('input').value;
+$('asyncStart').onclick=()=>setTimeout(()=>{$('asyncResult').textContent='异步任务已完成'},450);
+$('hideLater').onclick=()=>setTimeout(()=>{$('temporary').hidden=true},300);
+</script></html>

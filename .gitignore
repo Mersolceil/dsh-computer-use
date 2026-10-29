@@ -1,0 +1,7 @@
+node_modules/
+.artifacts/
+.computer-use-v1/
+.env
+.env.*
+*.tgz
+.DS_Store

@@ -1,0 +1,12 @@
+- insert:
+    - id: computer-use-v1
+      name: dsh-computer-use-v1
+      config:
+        headless: true
+        # Add exact origins here for sites you want to operate.
+        allowedOrigins:
+          - http://127.0.0.1:4173
+        artifactDir: !!js dshHomePath('computer-use-v1')
+        maxSteps: 100
+        timeoutMs: 10000
+        idleMs: 600000

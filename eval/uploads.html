@@ -1,0 +1,19 @@
+<!doctype html><meta charset="utf-8"><title>文件上传练习</title>
+<h1>文件上传练习</h1>
+<p>先选择文件，再确认上传。选择动作本身不会保存。</p>
+<input id="files" type="file" multiple hidden>
+<button id="choose">选择待上传文件</button>
+<button id="submit" disabled>确认上传文件</button>
+<output aria-live="polite">尚未选择文件</output>
+<script>
+const input=document.querySelector('#files'),output=document.querySelector('output'),submit=document.querySelector('#submit')
+document.querySelector('#choose').onclick=()=>input.click()
+input.onchange=()=>{output.textContent='已选择：'+[...input.files].map(f=>f.name+' ('+f.size+' bytes)').join('、');submit.disabled=!input.files.length}
+submit.onclick=async()=>{
+  submit.disabled=true
+  const files=[]
+  for(const file of input.files)files.push({name:file.name,type:file.type,content:await file.text()})
+  const response=await fetch('/api/upload',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({files})})
+  output.textContent=response.ok?'文件上传成功':'文件上传失败'
+}
+</script>

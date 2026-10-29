@@ -1,0 +1,50 @@
+{
+  "name": "dsh-computer-use-v1",
+  "version": "0.7.0-alpha.1",
+  "description": "Accessibility-first browser tools for DeepSeek Harness, with screenshots and controlled file uploads.",
+  "type": "module",
+  "main": "src/plugin.js",
+  "exports": {
+    ".": "./src/plugin.js",
+    "./browser": "./src/browser.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json",
+    "./desktop": "./src/desktop-plugin.js"
+  },
+  "files": [
+    "src",
+    "locale/*.json",
+    "icon.svg",
+    "cordis.patch.yml",
+    "README.md",
+    "docs",
+    "eval",
+    "scripts",
+    "test",
+    "LICENSE",
+    "native"
+  ],
+  "scripts": {
+    "test": "node --test --test-concurrency=1 test/*.test.js",
+    "eval": "node eval/run.js",
+    "eval:dsh": "node eval/dsh-run.js",
+    "lab": "node eval/lab.js",
+    "doctor": "node scripts/doctor.js",
+    "check": "node scripts/check.js"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "dependencies": {
+    "@deepseek-ai/schemastery": "3.18.5",
+    "playwright": "1.63.0"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "license": "MIT",
+  "icon": "./icon.svg"
+}
