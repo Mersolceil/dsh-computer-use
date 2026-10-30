@@ -3,18 +3,22 @@ import { spawn } from 'node:child_process'
 const bundlePattern=/^[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+$/
 const MAX_OUTPUT=512*1024
 export class DesktopSession {
- constructor({helperPath,allowedBundleIds=[],timeoutMs=8000,maxActions=100}){
+ constructor({helperPath,allowedBundleIds=[],applicationAccess='allowlist',timeoutMs=8000,maxActions=100}){
   if(typeof helperPath!=='string'||!helperPath.startsWith('/')||helperPath.includes('\0'))throw Error('Absolute desktop helper path required')
   if(!Array.isArray(allowedBundleIds)||allowedBundleIds.some(id=>typeof id!=='string'||!bundlePattern.test(id)))throw Error('Invalid application allowlist')
+  if(!['standard','allowlist'].includes(applicationAccess))throw Error('Invalid application access mode')
   if(!Number.isSafeInteger(timeoutMs)||timeoutMs<1||timeoutMs>30000||!Number.isSafeInteger(maxActions)||maxActions<1||maxActions>1000)throw Error('Invalid desktop limits')
-  Object.assign(this,{helperPath,allowed:new Set(allowedBundleIds),timeoutMs,maxActions,child:null,refs:new Map(),pending:null,nextId:1,actions:0})
+  Object.assign(this,{helperPath,allowed:new Set(allowedBundleIds),applicationAccess,timeoutMs,maxActions,child:null,refs:new Map(),targets:new Map(),pending:null,nextId:1,actions:0})
  }
- async attach({pid,bundleId},{signal}={}){
+ async attach({pid,bundleId,processStart},{signal,verifyTarget}={}){
   signal?.throwIfAborted()
   if(this.child)throw Error('Desktop session already attached')
   if(!Number.isSafeInteger(pid)||pid<1||pid>2147483647||!bundlePattern.test(bundleId??''))throw Error('Invalid desktop target')
-  if(!this.allowed.has(bundleId))return {ok:false,error_code:'APPLICATION_NOT_ALLOWED'}
-  const child=spawn(this.helperPath,['--serve',String(pid),bundleId],{stdio:['pipe','pipe','ignore'],windowsHide:true})
+  if(this.applicationAccess==='allowlist'&&!this.allowed.has(bundleId))return {ok:false,error_code:'APPLICATION_NOT_ALLOWED'}
+  if(processStart!==undefined&&(typeof processStart!=='string'||!/^\d+:\d+$/.test(processStart)))throw Error('Invalid application process identity')
+  // A second process-identity check after the native handshake permits reuse of
+  // an already authorized V4 AX helper without changing its signing identity.
+  const child=spawn(this.helperPath,['--serve',String(pid),bundleId,...(processStart===undefined||verifyTarget?[]:[processStart])],{stdio:['pipe','pipe','ignore'],windowsHide:true})
   this.child=child;this.pid=pid;this.bundleId=bundleId;this.buffer=''
   child.stdout.setEncoding('utf8')
   child.stdout.on('data',chunk=>{
@@ -36,6 +40,10 @@ export class DesktopSession {
   signal?.throwIfAborted()
   if(!ready.ok){await this.close();return ready}
   if(!ready.ready||ready.pid!==pid||ready.bundle_id!==bundleId){this.fail('INVALID_HELPER_OUTPUT');return {ok:false,error_code:'INVALID_HELPER_OUTPUT'}}
+  if(verifyTarget){
+   try{if(!(await verifyTarget())){await this.close();return {ok:false,error_code:'TARGET_CHANGED'}}}
+   catch(error){await this.close();throw error}
+  }
   return this.run('observe',{}, {signal})
  }
  wait(id,signal){
@@ -50,7 +58,7 @@ export class DesktopSession {
   })
  }
  fail(error){
-  const child=this.child;this.child=null;this.refs.clear()
+  const child=this.child;this.child=null;this.refs.clear();this.targets.clear()
   child?.stdin.destroy();child?.kill('SIGKILL')
   const pending=this.pending;this.pending=null
   pending?.resolve({ok:false,error_code:error,state_uncertain:pending.id!==undefined})
@@ -67,20 +75,20 @@ export class DesktopSession {
    if(action==='fill'&&(typeof args.text!=='string'||Array.from(args.text).length>10000))throw Error('Invalid desktop text')
   }
   const id=this.nextId++,result=this.wait(id,signal)
-  this.refs.clear();this.actions++
+  this.refs.clear();this.targets.clear();this.actions++
   this.child.stdin.write(JSON.stringify({id,action,...args})+'\n',error=>{if(error)this.fail('DESKTOP_HELPER_FAILED')})
   const value=await result
   signal?.throwIfAborted()
   if(value.ok&&action==='observe'){
-   if(value.pid!==this.pid||value.bundle_id!==this.bundleId||value.editable_values_read!==false||value.static_text_values_read!==true||!Array.isArray(value.windows)||!Number.isSafeInteger(value.nodes)||value.nodes<0||value.nodes>200||typeof value.truncated!=='boolean'){this.fail('INVALID_HELPER_OUTPUT');return {ok:false,error_code:'INVALID_HELPER_OUTPUT'}}
+   if(value.pid!==this.pid||value.bundle_id!==this.bundleId||value.editable_values_read!==false||value.static_text_values_read!==true||!Array.isArray(value.windows)||!Number.isSafeInteger(value.nodes)||value.nodes<0||value.nodes>800||typeof value.truncated!=='boolean'){this.fail('INVALID_HELPER_OUTPUT');return {ok:false,error_code:'INVALID_HELPER_OUTPUT'}}
    let count=0
    const visit=(node,depth)=>{
-    if(!node||typeof node!=='object'||Array.isArray(node)||depth>8||++count>200||typeof node.role!=='string'||Object.keys(node).some(k=>!['role','title','description','text','children','ref','actions','protected'].includes(k)))throw Error('Invalid desktop node')
+    if(!node||typeof node!=='object'||Array.isArray(node)||depth>24||++count>800||typeof node.role!=='string'||Object.keys(node).some(k=>!['role','title','description','text','children','ref','actions','protected'].includes(k)))throw Error('Invalid desktop node')
     for(const key of ['role','title','description','text'])if(node[key]!==undefined&&(typeof node[key]!=='string'||Buffer.byteLength(node[key])>4096))throw Error('Invalid desktop text')
     if(node.text!==undefined&&node.role!=='AXStaticText')throw Error('Editable values are forbidden')
     if(node.protected!==undefined&&node.protected!==true)throw Error('Invalid protection marker')
     if(node.protected&&Object.keys(node).some(k=>!['role','protected'].includes(k)))throw Error('Protected content must be excluded')
-    if(node.ref!==undefined){if(node.protected||typeof node.ref!=='string'||node.ref.length>128||this.refs.has(node.ref)||!Array.isArray(node.actions)||!node.actions.length||node.actions.some(a=>!['click','fill','confirm'].includes(a)))throw Error('Invalid desktop ref');this.refs.set(node.ref,node.actions)}
+    if(node.ref!==undefined){if(node.protected||typeof node.ref!=='string'||node.ref.length>128||this.refs.has(node.ref)||!Array.isArray(node.actions)||!node.actions.length||node.actions.some(a=>!['click','fill','confirm'].includes(a)))throw Error('Invalid desktop ref');this.refs.set(node.ref,node.actions);this.targets.set(node.ref,{role:node.role,title:node.title??node.description??''})}
     else if(node.actions!==undefined)throw Error('Actions require a ref')
     if(node.children!==undefined){if(!Array.isArray(node.children))throw Error('Invalid children');node.children.forEach(n=>visit(n,depth+1))}
    }

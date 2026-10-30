@@ -1,7 +1,7 @@
 {
   "name": "dsh-computer-use-v1",
-  "version": "0.7.0-alpha.1",
-  "description": "Accessibility-first browser tools for DeepSeek Harness, with screenshots and controlled file uploads.",
+  "version": "0.12.0-alpha.1",
+  "description": "Browser tools and experimental macOS screenshot-based computer use for DeepSeek Harness.",
   "type": "module",
   "main": "src/plugin.js",
   "exports": {
@@ -46,5 +46,20 @@
     }
   },
   "license": "MIT",
-  "icon": "./icon.svg"
+  "icon": "./icon.svg",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Mersolceil/dsh-computer-use.git"
+  },
+  "homepage": "https://github.com/Mersolceil/dsh-computer-use#readme",
+  "bugs": {
+    "url": "https://github.com/Mersolceil/dsh-computer-use/issues"
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh-plugin",
+    "computer-use",
+    "browser-automation",
+    "macos"
+  ]
 }

@@ -221,7 +221,16 @@ export class BrowserSession {
     if (action === 'open' || action === 'tab_new') {
       const url = this.checkUrl(args.url)
       if (!this.browser) await this.start(this.activeSignal)
+      if(action==='open'&&args.reuse!==false){
+        const requested=new URL(url),tabs=[...this.tabs.records.values()].filter(t=>!t.page.isClosed()).sort((a,b)=>b.lastUsed-a.lastUsed)
+        const exact=tabs.find(t=>t.page.url()===url)
+        const sameSite=tabs.filter(t=>{try{return new URL(t.page.url()).origin===requested.origin}catch{return false}})
+        const existing=exact||sameSite.find(t=>t.requestedUrl===url)||(requested.pathname==='/'&&!requested.search&&!requested.hash&&sameSite.length===1?sameSite[0]:undefined)
+        if(existing){await this.tabs.activate(existing.id);return {reused_tab:true,...await this.observe()}}
+        if(!exact&&requested.pathname==='/'&&sameSite.length>1)return {ok:false,error_code:'AMBIGUOUS_OPEN_TABS',...await this.tabs.summary(),message:'Several existing tabs match this website. Select an issued tab_id; no page was opened or reloaded.'}
+      }
       const tab = action === 'tab_new' || !this.tabs.active ? await this.createTab() : this.tabs.active
+      tab.requestedUrl=url
       await tab.page.goto(url, { waitUntil: 'domcontentloaded' })
     } else {
       const tab = this.tabs.active
@@ -230,12 +239,13 @@ export class BrowserSession {
       if (action === 'observe') return this.observe(args)
       if (action === 'find') return this.observe({ ...args, filter: args.filter || 'all' })
       if (action === 'screenshot') {
-        for (let attempt = 0; attempt < 3; attempt++) {
-          const observation = await this.observe()
-          const picture = await visual.capture()
-          if (observation.navigation_epoch === picture.visual_context.navigation_epoch && observation.url === picture.visual_context.url && observation.active_tab_id === picture.visual_context.tab_id) return { ...observation, ...picture }
-        }
-        throw new BrowserError('PAGE_CHANGED', 'Page kept navigating while combining the screenshot and semantic observation.')
+        // A missing semantic tree must not disable the visual fallback itself.
+        let observation,observationError
+        try{observation=await this.observe()}catch(error){observationError=error.code||'ACCESSIBILITY_UNAVAILABLE'}
+        await this.tabs.check(tab)
+        const picture=await visual.capture()
+        const coherent=observation&&observation.navigation_epoch===picture.visual_context.navigation_epoch&&observation.url===picture.visual_context.url&&observation.active_tab_id===picture.visual_context.tab_id
+        return {...(coherent?observation:{...await this.tabs.summary(),url:picture.visual_context.url,observation_available:false,observation_error:observationError||'PAGE_CHANGED'}),...picture,capture_source:'owned-browser-viewport',personal_browser:false}
       }
       if (action === 'history') {
         if (args.direction === 'reload') await page.reload({ waitUntil: 'domcontentloaded' })
@@ -304,6 +314,7 @@ export class BrowserSession {
     try {
       if (typeof args !== 'object' || args === null || Array.isArray(args)) throw new BrowserError('INVALID_ARGUMENT', 'Arguments must be an object.')
       if (['open', 'tab_new'].includes(action) && typeof args.url !== 'string') throw new BrowserError('INVALID_ARGUMENT', 'url must be a string')
+      if(action==='open'&&args.reuse!==undefined&&typeof args.reuse!=='boolean')throw new BrowserError('INVALID_ARGUMENT','reuse must be a boolean')
       if (['tab_switch','tab_close'].includes(action) && typeof args.tab_id !== 'string') throw new BrowserError('INVALID_ARGUMENT', 'tab_id must be an issued tab ID')
       if (action === 'history' && !['back','forward','reload'].includes(args.direction)) throw new BrowserError('INVALID_ARGUMENT','direction must be back, forward or reload')
       if (['click', 'fill'].includes(action) && typeof args.target !== 'string') throw new BrowserError('INVALID_ARGUMENT', 'target must be an observed accessibility ref')

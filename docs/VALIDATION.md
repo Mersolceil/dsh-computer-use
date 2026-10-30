@@ -1,38 +1,24 @@
-# Validation — 0.7.0-alpha.1
+# Validation — 0.12.0-alpha.1
 
-This is a preview release. Results describe the tested configuration and synthetic tasks; they are not a general success rate.
+These results describe a local synthetic configuration, not a general success rate. Previously applicable results were reused; no full regression or new paid-model evaluation was added for this release.
 
-## Accepted checks
-
-| Scope | Result | Limits |
+| Check | Evidence | Limit |
 |---|---|---|
-| Latest source regression | 156 passed, 0 skipped | Local automated tests |
-| macOS V4 AX controls | Passed | Dedicated synthetic AppKit window only |
-| V4 DSH with real model | Passed: 6 desktop calls, 0 tool errors | One task; independent application output confirmed one save |
-| V4 packed installation | Passed: clean install, actual DSH, 6 calls | Local scripted provider; static Saved: 1 was visible |
-| History-index repair | Passed: 8 actual DSH browser calls | Local scripted provider; index ID used to recall original detail observation |
-| Earlier Native long flows | Passed with 51 and 77 successful observations | Before the history-index addition; independent model trajectories |
+| Related local checks | 10 passed across workflow, grant, visual ticket, image policy and approval transport cases | Unit-level checks; not all project tests |
+| Actual DSH services | Native approval seam priority and never policy, 3 audit pairs, lossless authorize output, 7 images reduced to 2, recall, replay and pending-input deferral passed | Synthetic session; approval transport substituted |
+| Screenshot-only desktop workflow | 6 exposed tool calls: start, four steps, revoke; one new note, one received mouse click, exact Chinese/emoji/multiline text and one save | Disposable AppKit editor; no personal app |
+| Focus and images | DSH foreground checked five times, every input returned to it; four new image deliveries and one exact image reuse | One local desktop setup |
+| Approval UI | Actual floating panel captured and synthetic Reject button exercised; matched request ID returned rejected | No real control request or human Allow acceptance |
+| Native helper | Compiled and ad-hoc signature verified | Local build, not notarized distribution |
 
-The desktop tests verified Chinese text input, a single save, a model-visible static success label, protected-value exclusion, reference invalidation after an action, and rejection of a renamed control. The real-model run and packed-installation test both independently confirmed exactly one save. Browser tests used isolated Chromium Headless Shell 153.0.8010.12 with Playwright 1.63.0, without personal Chrome profiles.
+The integration used the real DSH ToolRuntime, ApprovalService and LocalAttachmentStore. The fixture window was deliberately partly outside the display. Two scripted approvals covered the nonstandard fixture application path and the task scope; one scope approval for a conventional installed app was separately checked in units. AX/HTML/clipboard reads were zero in the screenshot-only fixture workflow. The final saved image was inspected.
 
-## Retained failures and reduced test scope
+Retained failures included invalid synthetic PNG data rejected by the real attachment store, a locked-session preflight, an early check-script branch mistake, and an assertion expecting absent isError where the SDK returned false. Each cause was recorded and corrected; none was counted as success. The authorize bug that returned an undefined optional preview field after creating a grant was fixed and tested at the actual ToolRuntime lossless-JSON boundary.
 
-- A PTC long flow was stopped after repeated guessed history IDs (including 118 HISTORY_NOT_FOUND and 10 IMAGE_HISTORY_NOT_FOUND outcomes). A paginated history index was added and verified with unit tests, failure-session replay and the short actual-DSH test. A repaired real-model PTC long flow has **not** been completed.
-- A later Native sample completed 49 successful observations. It passed the other 13 long-flow checks but failed the required minimum of 50. That sample remains a failure; earlier passing samples do not erase it.
-- Later desktop rechecks returned an application shell without window controls. After the user confirmed an unlocked desktop, V4 direct tests, renamed-control tests, actual DSH tests and the packed-installation test passed. This sequence does not prove the sole cause of the earlier failure.
-- An initial packed-package evaluation failed because npm omits package-lock.json. Provenance now records a null fingerprint and unavailable_files rather than inventing a hash; a regression test covers this case. The corrected packed installation passed the DSH desktop check.
-- Offline installs initially failed due to missing npm cache entries; registry installation succeeded using a project-local cache. No global cache permissions were changed.
+Earlier versions also encountered window-readiness races, hidden internal-window selection, black captures, unsuccessful event delivery and a preview overlapping a click target. The current implementation retains identity, capture and hit-target guards. These corrections do not prove compatibility with every app or solve animated-page guarding.
 
-The user requested fewer tests. Repeated full regressions and the remaining four-way long-flow comparison were therefore stopped. No additional API credential was requested for the final local short check. PTC history trimming, duplicate compaction, image window/pins and budget diagnostics remain experimental and default off. The reported Native peak request inputs (60,328 and 79,710 tokens) came from different trajectories and are **not** evidence of cost savings.
+No new paid model/API call was made for these checks. See [known limitations](KNOWN-LIMITATIONS.md), [desktop setup](DESKTOP-CONTROL.md) and [workflow details](DESKTOP-WORKFLOW-0.12.md).
 
-## Unsupported or unverified scope
+## Publication scope
 
-Desktop screenshots, global mouse/keyboard input, desktop PTC, arbitrary application coverage, notarized helper distribution, and every AX cancellation race are not supplied or verified. AXConfirm is a semantic control action, not global keyboard input. The desktop helper reads values only from static status labels, excluding editable and protected values. Business completion must still be checked in the target application.
-
-Budget status is an estimate of committed context, not a complete final-request token limit. Full autonomous PTC long-flow reliability after the index repair remains unverified. Other DSH/provider/platform versions may behave differently.
-
-## Publication privacy scope
-
-The public tree contains source, synthetic fixtures, setup guides and summarized results. Internal continuation notes, raw provider/session logs, captured images, environment files, caches, generated helpers and old archives are excluded. An unused captured provider replay fixture was also excluded. The export has a new Git history and uses a verified GitHub noreply commit address.
-
-All staged files were checked for common credential patterns and personal absolute paths; file scope and commit metadata were reviewed separately. Such checks do not prove the absence of every possible sensitive string. Public GitHub account identity remains visible.
+The public tree contains source, synthetic fixtures and summarized validation. Personal usage statistics, credentials, raw session/provider logs, captured UI images, helper binaries, internal continuation/install records and caches are excluded. The single PNG fixture is a generated checkerboard, not a desktop capture. Existing public Git history and the new change are checked separately for common credential patterns and personal paths; heuristic scans cannot prove the absence of every sensitive string.

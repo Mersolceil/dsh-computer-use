@@ -39,7 +39,7 @@ final class Fixture: NSObject, NSApplicationDelegate {
         status = label
         panel = window
         window.orderFrontRegardless()
-        FileHandle.standardOutput.write(Data("PID:\(ProcessInfo.processInfo.processIdentifier)\nREADY\n".utf8))
+        FileHandle.standardOutput.write(Data("PID:\(ProcessInfo.processInfo.processIdentifier)\nFRAME:\(window.frame.width),\(window.frame.height)\nLEVEL:\(window.level.rawValue)\nREADY\n".utf8))
     }
 
     @objc func save() {

@@ -162,7 +162,7 @@ export class AccessibilityReader {
 
   async readOnce(options = {}) {
     const { config } = this.session
-    const filter = options.filter || 'interactive'
+    const filter = options.filter || 'all'
     const depth = options.depth ?? config.observationDepth
     const maxChars = options.max_chars ?? config.maxTreeChars
     if (!['all', 'interactive'].includes(filter) || !Number.isSafeInteger(depth) || depth < 1 || depth > 50 || !Number.isSafeInteger(maxChars) || maxChars < 500 || maxChars > config.maxTreeChars) {
